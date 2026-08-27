@@ -469,7 +469,6 @@
 
   let rolling = false;
   let phase = 'idle';
-  let targetD6 = 1;
   let rollStartedAt = 0;
   let stableSince = null;
   let optionSnapshot = ['', '', ''];
@@ -482,17 +481,6 @@
 
   function randomSignedMagnitude(min, max) {
     return (Math.random() < 0.5 ? -1 : 1) * rand(min, max);
-  }
-
-  function secureD6() {
-    if (window.crypto?.getRandomValues) {
-      const range = 0x100000000;
-      const limit = range - (range % 6);
-      const u = new Uint32Array(1);
-      do { window.crypto.getRandomValues(u); } while (u[0] >= limit);
-      return (u[0] % 6) + 1;
-    }
-    return Math.floor(Math.random() * 6) + 1;
   }
 
   function randomQuaternion() {
@@ -515,7 +503,6 @@
     if (rolling) return;
     rolling = true;
     phase = 'physics';
-    targetD6 = secureD6();
     rollStartedAt = performance.now();
     stableSince = null;
     correction = null;
@@ -546,7 +533,29 @@
     dieBody.torque.setZero();
   }
 
-  function beginCorrection(now) {
+  function getTopFace() {
+    const q = new THREE.Quaternion(
+      dieBody.quaternion.x,
+      dieBody.quaternion.y,
+      dieBody.quaternion.z,
+      dieBody.quaternion.w
+    ).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    let bestFace = 1;
+    let bestDot = -Infinity;
+
+    for (let face = 1; face <= 6; face++) {
+      const dot = FACE_NORMALS[face].clone().applyQuaternion(q).dot(up);
+      if (dot > bestDot) {
+        bestDot = dot;
+        bestFace = face;
+      }
+    }
+
+    return { face: bestFace, alignment: bestDot };
+  }
+
+  function beginCorrection(now, face) {
     if (!rolling || phase !== 'physics') return;
     phase = 'correction';
     dieBody.velocity.setZero();
@@ -561,13 +570,14 @@
       dieBody.quaternion.w
     ).normalize();
 
-    const desiredWorldNormal = FACE_NORMALS[targetD6].clone().applyQuaternion(startQuat).normalize();
+    const desiredWorldNormal = FACE_NORMALS[face].clone().applyQuaternion(startQuat).normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const adjust = new THREE.Quaternion().setFromUnitVectors(desiredWorldNormal, up);
     const targetQuat = adjust.multiply(startQuat).normalize();
     const angle = startQuat.angleTo(targetQuat);
 
     correction = {
+      face,
       startedAt: now,
       duration: THREE.MathUtils.clamp(150 + angle * 125, 150, 500),
       startQuat,
@@ -606,8 +616,9 @@
       dieBody.collisionResponse = true;
       dieBody.updateMassProperties();
       dieBody.sleep();
+      const finalFace = correction.face;
       correction = null;
-      finalizeResult(targetD6);
+      finalizeResult(finalFace);
     }
   }
 
@@ -649,13 +660,27 @@
 
     if (elapsed > 1050 && speed < 0.34 && angularSpeed < 0.48) {
       if (stableSince === null) stableSince = now;
-      if (now - stableSince > 360) beginCorrection(now);
+      if (now - stableSince > 360) {
+        const physical = getTopFace();
+
+        // A normally settled cube should already have one face almost flat-up.
+        // Accept that real physical result instead of forcing a preselected face.
+        if (physical.alignment > 0.93) {
+          dieBody.velocity.setZero();
+          dieBody.angularVelocity.setZero();
+          dieBody.sleep();
+          finalizeResult(physical.face);
+        }
+      }
     } else {
       stableSince = null;
     }
 
     if (elapsed > 6200 && phase === 'physics') {
-      beginCorrection(now);
+      // Rare fallback for a die that gets stuck at an odd angle:
+      // align the face that is ALREADY most upward, so the correction is small.
+      const physical = getTopFace();
+      beginCorrection(now, physical.face);
     }
   }
 
@@ -712,7 +737,7 @@
   const FIXED_STEP = 1 / 60;
   const RENDER_INTERVAL = 1000 / 12;
   let lastPhysicsAt = performance.now();
-  let lastRenderAt = -Infinity;
+  let nextRenderAt = 0;
 
   function syncVisuals() {
     const jitter = ((renderFrame % 3) - 1) * 0.006;
@@ -740,11 +765,11 @@
     world.step(FIXED_STEP, dt, 4);
     updateRollState(now);
 
-    if (now - lastRenderAt >= RENDER_INTERVAL) {
-      lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
+    if (now >= nextRenderAt) {
       syncVisuals();
       renderer.render(scene, camera);
       renderFrame++;
+      nextRenderAt = now + RENDER_INTERVAL;
     }
   }
 
@@ -759,7 +784,7 @@
     renderer.setSize(internalW, internalH, false);
     camera.aspect = cssW / cssH;
     camera.updateProjectionMatrix();
-    lastRenderAt = -Infinity;
+    nextRenderAt = 0;
   }
 
   const resizeObserver = new ResizeObserver(resizeRenderer);

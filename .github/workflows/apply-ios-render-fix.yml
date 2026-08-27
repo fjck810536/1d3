@@ -1,0 +1,82 @@
+name: Apply iOS render fix
+
+on:
+  push:
+    branches:
+      - fix/ios-render-loop
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ios-render-loop
+
+      - name: Patch renderer scheduler
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          s = path.read_text()
+
+          old_clock = "  let lastPhysicsAt = performance.now();\n  let lastRenderAt = -Infinity;"
+          new_clock = "  let lastPhysicsAt = performance.now();\n  let nextRenderAt = 0;"
+          assert old_clock in s, 'render clock block not found'
+          s = s.replace(old_clock, new_clock, 1)
+
+          old_render = """    if (now - lastRenderAt >= RENDER_INTERVAL) {
+              lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
+              syncVisuals();
+              renderer.render(scene, camera);
+              renderFrame++;
+            }
+          """
+          # Match the actual indentation exactly after dedent from YAML block.
+          old_render = old_render.replace('              ', '      ').replace('            }', '    }')
+          new_render = """    if (now >= nextRenderAt) {
+              syncVisuals();
+              renderer.render(scene, camera);
+              renderFrame++;
+              nextRenderAt = now + RENDER_INTERVAL;
+            }
+          """
+          new_render = new_render.replace('              ', '      ').replace('            }', '    }')
+          assert old_render in s, 'render throttle block not found'
+          s = s.replace(old_render, new_render, 1)
+
+          assert "    lastRenderAt = -Infinity;" in s, 'resize clock reset not found'
+          s = s.replace("    lastRenderAt = -Infinity;", "    nextRenderAt = 0;", 1)
+
+          old_viewport = "  window.visualViewport?.addEventListener('resize', () => requestAnimationFrame(resizeRenderer));"
+          new_lifecycle = """  window.addEventListener('pageshow', () => {
+              lastPhysicsAt = performance.now();
+              nextRenderAt = 0;
+              resizeRenderer();
+            });
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden) {
+                lastPhysicsAt = performance.now();
+                nextRenderAt = 0;
+              }
+            });"""
+          new_lifecycle = new_lifecycle.replace('            ', '  ', 1)
+          assert old_viewport in s, 'visualViewport resize handler not found'
+          s = s.replace(old_viewport, new_lifecycle, 1)
+
+          assert 'lastRenderAt' not in s
+          path.write_text(s)
+          PY
+
+      - name: Commit fix and remove one-shot workflow
+        run: |
+          rm .github/workflows/apply-ios-render-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/apply-ios-render-fix.yml
+          git commit -m "Fix iOS 12fps render scheduler [skip ci]"
+          git push origin HEAD:fix/ios-render-loop

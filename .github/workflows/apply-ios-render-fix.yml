@@ -24,51 +24,49 @@ jobs:
           path = Path('index.html')
           s = path.read_text()
 
-          old_clock = "  let lastPhysicsAt = performance.now();\n  let lastRenderAt = -Infinity;"
-          new_clock = "  let lastPhysicsAt = performance.now();\n  let nextRenderAt = 0;"
-          assert old_clock in s, 'render clock block not found'
-          s = s.replace(old_clock, new_clock, 1)
+          replacements = [
+              (
+                  "  let lastRenderAt = -Infinity;",
+                  "  let nextRenderAt = 0;"
+              ),
+              (
+                  "    if (now - lastRenderAt >= RENDER_INTERVAL) {",
+                  "    if (now >= nextRenderAt) {"
+              ),
+              (
+                  "      lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);\n",
+                  ""
+              ),
+              (
+                  "      renderFrame++;\n    }\n  }\n\n  function resizeRenderer()",
+                  "      renderFrame++;\n      nextRenderAt = now + RENDER_INTERVAL;\n    }\n  }\n\n  function resizeRenderer()"
+              ),
+              (
+                  "    lastRenderAt = -Infinity;",
+                  "    nextRenderAt = 0;"
+              ),
+              (
+                  "  window.visualViewport?.addEventListener('resize', () => requestAnimationFrame(resizeRenderer));",
+                  """  window.addEventListener('pageshow', () => {
+    lastPhysicsAt = performance.now();
+    nextRenderAt = 0;
+    resizeRenderer();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      lastPhysicsAt = performance.now();
+      nextRenderAt = 0;
+    }
+  });"""
+              ),
+          ]
 
-          old_render = """    if (now - lastRenderAt >= RENDER_INTERVAL) {
-              lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
-              syncVisuals();
-              renderer.render(scene, camera);
-              renderFrame++;
-            }
-          """
-          # Match the actual indentation exactly after dedent from YAML block.
-          old_render = old_render.replace('              ', '      ').replace('            }', '    }')
-          new_render = """    if (now >= nextRenderAt) {
-              syncVisuals();
-              renderer.render(scene, camera);
-              renderFrame++;
-              nextRenderAt = now + RENDER_INTERVAL;
-            }
-          """
-          new_render = new_render.replace('              ', '      ').replace('            }', '    }')
-          assert old_render in s, 'render throttle block not found'
-          s = s.replace(old_render, new_render, 1)
-
-          assert "    lastRenderAt = -Infinity;" in s, 'resize clock reset not found'
-          s = s.replace("    lastRenderAt = -Infinity;", "    nextRenderAt = 0;", 1)
-
-          old_viewport = "  window.visualViewport?.addEventListener('resize', () => requestAnimationFrame(resizeRenderer));"
-          new_lifecycle = """  window.addEventListener('pageshow', () => {
-              lastPhysicsAt = performance.now();
-              nextRenderAt = 0;
-              resizeRenderer();
-            });
-            document.addEventListener('visibilitychange', () => {
-              if (!document.hidden) {
-                lastPhysicsAt = performance.now();
-                nextRenderAt = 0;
-              }
-            });"""
-          new_lifecycle = new_lifecycle.replace('            ', '  ', 1)
-          assert old_viewport in s, 'visualViewport resize handler not found'
-          s = s.replace(old_viewport, new_lifecycle, 1)
+          for old, new in replacements:
+              assert old in s, f'missing expected block: {old[:60]!r}'
+              s = s.replace(old, new, 1)
 
           assert 'lastRenderAt' not in s
+          assert 'nextRenderAt = now + RENDER_INTERVAL;' in s
           path.write_text(s)
           PY
 

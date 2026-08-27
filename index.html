@@ -712,7 +712,7 @@
   const FIXED_STEP = 1 / 60;
   const RENDER_INTERVAL = 1000 / 12;
   let lastPhysicsAt = performance.now();
-  let lastRenderAt = -Infinity;
+  let nextRenderAt = 0;
 
   function syncVisuals() {
     const jitter = ((renderFrame % 3) - 1) * 0.006;
@@ -740,11 +740,11 @@
     world.step(FIXED_STEP, dt, 4);
     updateRollState(now);
 
-    if (now - lastRenderAt >= RENDER_INTERVAL) {
-      lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
+    if (now >= nextRenderAt) {
       syncVisuals();
       renderer.render(scene, camera);
       renderFrame++;
+      nextRenderAt = now + RENDER_INTERVAL;
     }
   }
 
@@ -759,7 +759,7 @@
     renderer.setSize(internalW, internalH, false);
     camera.aspect = cssW / cssH;
     camera.updateProjectionMatrix();
-    lastRenderAt = -Infinity;
+    nextRenderAt = 0;
   }
 
   const resizeObserver = new ResizeObserver(resizeRenderer);

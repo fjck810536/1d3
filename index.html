@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151713">
+  <title>1d3</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #151713;
+      color: #d7d8ce;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #151713; }
+    body { min-height: 100svh; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+    main {
+      width: min(100%, 620px);
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    }
+    .options { display: grid; gap: 7px; margin: 0 0 12px; }
+    .option-row {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      gap: 7px;
+    }
+    .option-row label {
+      color: #bbbdb2;
+      text-align: right;
+      font-size: 16px;
+      line-height: 1;
+      user-select: none;
+    }
+    .option-row input {
+      width: 100%; min-width: 0; height: 38px; padding: 6px 8px;
+      border: 1px solid #55594f; border-radius: 0; outline: 0;
+      background: #1c1e1a; color: #ededdf; font: inherit; font-size: 16px;
+      caret-color: #ededdf; -webkit-appearance: none; appearance: none;
+    }
+    .option-row input:focus { border-color: #929687; background: #20221d; }
+    .stage {
+      position: relative;
+      width: 100%;
+      height: min(52svh, calc(100vw - 28px), 520px);
+      min-height: 300px;
+      max-height: 520px;
+      overflow: hidden;
+      background: #11130f;
+      border: 1px solid #3e4239;
+    }
+    #diceCanvas {
+      display: block; width: 100%; height: 100%;
+      image-rendering: pixelated; image-rendering: crisp-edges;
+      touch-action: manipulation; cursor: pointer; outline: none;
+    }
+    #diceCanvas.busy { cursor: default; }
+    .hint {
+      position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2;
+      margin: 0; text-align: center; color: rgba(215, 216, 206, .48);
+      font-size: 13px; letter-spacing: .08em; pointer-events: none; user-select: none;
+    }
+    .hint.hidden { visibility: hidden; }
+    .result { min-height: 68px; padding: 12px 2px 4px; text-align: center; }
+    .result[hidden] { display: block; visibility: hidden; }
+    .result-index {
+      margin: 0; font-size: 28px; line-height: 1.1; font-weight: 700;
+      letter-spacing: .02em; color: #eeefe5;
+    }
+    .result-label {
+      margin: 6px 0 0; min-height: 1.2em; color: #c8cabf;
+      font-size: 17px; line-height: 1.3; overflow-wrap: anywhere;
+    }
+    .history { margin-top: 10px; border-top: 1px solid #3e4239; padding-top: 10px; }
+    .history[hidden] { display: none; }
+    .history h2 {
+      margin: 0 0 7px; color: #8f9387; font-size: 12px;
+      font-weight: 400; letter-spacing: .15em;
+    }
+    .history ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    .history li {
+      color: #bfc1b7; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere;
+    }
+    @media (max-height: 700px) and (orientation: portrait) {
+      main { padding-top: 9px; }
+      .options { gap: 5px; margin-bottom: 8px; }
+      .option-row input { height: 34px; }
+      .stage { min-height: 260px; height: min(46svh, calc(100vw - 28px)); }
+      .result { min-height: 60px; padding-top: 9px; }
+    }
+    @media (orientation: landscape) and (max-height: 520px) {
+      main { width: min(100%, 760px); }
+      .stage { height: 62svh; min-height: 250px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="options" aria-label="三個選項">
+    <div class="option-row"><label for="option1">1</label><input id="option1" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
+    <div class="option-row"><label for="option2">2</label><input id="option2" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
+    <div class="option-row"><label for="option3">3</label><input id="option3" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
+  </section>
+
+  <section id="stage" class="stage" aria-label="透明骰子盒">
+    <canvas id="diceCanvas" tabindex="0" role="button" aria-label="點骰子擲骰"></canvas>
+    <p id="hint" class="hint">點骰子</p>
+  </section>
+
+  <section id="result" class="result" aria-live="polite" hidden>
+    <p id="resultIndex" class="result-index"></p>
+    <p id="resultLabel" class="result-label"></p>
+  </section>
+
+  <section id="history" class="history" hidden>
+    <h2>HISTORY</h2>
+    <ol id="historyList"></ol>
+  </section>
+</main>
+
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+  import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
+  const $ = (id) => document.getElementById(id);
+  const canvas = $('diceCanvas');
+  const stage = $('stage');
+  const hint = $('hint');
+  const resultEl = $('result');
+  const resultIndexEl = $('resultIndex');
+  const resultLabelEl = $('resultLabel');
+  const historyEl = $('history');
+  const historyList = $('historyList');
+  const optionInputs = [$('option1'), $('option2'), $('option3')];
+
+  const DICE_GLYPHS = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  const FACE_NORMALS = {
+    1: new THREE.Vector3(0, 1, 0),
+    2: new THREE.Vector3(0, 0, 1),
+    3: new THREE.Vector3(1, 0, 0),
+    4: new THREE.Vector3(-1, 0, 0),
+    5: new THREE.Vector3(0, 0, -1),
+    6: new THREE.Vector3(0, -1, 0)
+  };
+  const mappedResult = (d6) => Math.ceil(d6 / 2);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x11130f);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 50);
+  camera.position.set(5.3, 4.4, 6.3);
+  camera.lookAt(0, 2.05, 0);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'default' });
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  scene.add(new THREE.AmbientLight(0xd8d5c3, 1.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.35);
+  sun.position.set(3, 7, 4);
+  scene.add(sun);
+
+  const FLOOR_Y = 0;
+  const BOX_W = 4.6;
+  const BOX_H = 4.7;
+  const BOX_D = 3.8;
+  const DIE_SIZE = 1.14;
+  const HALF_DIE = DIE_SIZE / 2;
+
+  const boxVisual = new THREE.BoxGeometry(BOX_W, BOX_H, BOX_D);
+  const boxEdges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(boxVisual),
+    new THREE.LineBasicMaterial({ color: 0x6f7468, transparent: true, opacity: 0.42 })
+  );
+  boxEdges.position.y = BOX_H / 2;
+  scene.add(boxEdges);
+
+  const floorVisual = new THREE.Mesh(
+    new THREE.PlaneGeometry(BOX_W, BOX_D),
+    new THREE.MeshBasicMaterial({ color: 0x5e6357, transparent: true, opacity: 0.16, side: THREE.DoubleSide })
+  );
+  floorVisual.rotation.x = -Math.PI / 2;
+  floorVisual.position.y = FLOOR_Y + 0.002;
+  scene.add(floorVisual);
+
+  function pipTexture(value) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const ctx = c.getContext('2d', { alpha: false });
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#d6d3bd';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#747262';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, 62, 62);
+    const p = {
+      tl: [17, 17], tc: [32, 17], tr: [47, 17],
+      ml: [17, 32], mc: [32, 32], mr: [47, 32],
+      bl: [17, 47], bc: [32, 47], br: [47, 47]
+    };
+    const layout = {
+      1: ['mc'], 2: ['tl', 'br'], 3: ['tl', 'mc', 'br'],
+      4: ['tl', 'tr', 'bl', 'br'],
+      5: ['tl', 'tr', 'mc', 'bl', 'br'],
+      6: ['tl', 'tr', 'ml', 'mr', 'bl', 'br']
+    }[value];
+    ctx.fillStyle = '#171813';
+    for (const key of layout) {
+      const [x, y] = p[key];
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const texture = new THREE.CanvasTexture(c);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    return texture;
+  }
+
+  const materialFaceOrder = [3, 4, 1, 6, 2, 5];
+  const dieMaterials = materialFaceOrder.map((face) => new THREE.MeshLambertMaterial({ map: pipTexture(face), flatShading: true }));
+  const dieMesh = new THREE.Mesh(new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 1, 1, 1), dieMaterials);
+  scene.add(dieMesh);
+
+  const dieEdges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(DIE_SIZE * 1.004, DIE_SIZE * 1.004, DIE_SIZE * 1.004)),
+    new THREE.LineBasicMaterial({ color: 0x272820, transparent: true, opacity: 0.72 })
+  );
+  dieMesh.add(dieEdges);
+
+  const hitMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(DIE_SIZE * 1.55, DIE_SIZE * 1.55, DIE_SIZE * 1.55),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+  );
+  scene.add(hitMesh);
+
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.74, 12),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.27, depthWrite: false })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = FLOOR_Y + 0.008;
+  scene.add(shadow);
+
+  const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -10.4, 0) });
+  world.allowSleep = true;
+  world.solver.iterations = 12;
+  world.solver.tolerance = 0.001;
+
+  const diePhysicsMaterial = new CANNON.Material('die');
+  const wallPhysicsMaterial = new CANNON.Material('wall');
+  world.addContactMaterial(new CANNON.ContactMaterial(diePhysicsMaterial, wallPhysicsMaterial, {
+    friction: 0.48,
+    restitution: 0.34,
+    contactEquationStiffness: 1e7,
+    contactEquationRelaxation: 4
+  }));
+
+  const dieBody = new CANNON.Body({
+    mass: 1,
+    material: diePhysicsMaterial,
+    shape: new CANNON.Box(new CANNON.Vec3(HALF_DIE, HALF_DIE, HALF_DIE)),
+    position: new CANNON.Vec3(0, HALF_DIE + 0.03, 0),
+    linearDamping: 0.12,
+    angularDamping: 0.14,
+    allowSleep: true,
+    sleepSpeedLimit: 0.12,
+    sleepTimeLimit: 0.45
+  });
+  world.addBody(dieBody);
+
+  const WALL_T = 0.10;
+  function staticBox(halfExtents, position) {
+    const body = new CANNON.Body({ mass: 0, material: wallPhysicsMaterial });
+    body.addShape(new CANNON.Box(halfExtents));
+    body.position.copy(position);
+    world.addBody(body);
+    return body;
+  }
+  staticBox(new CANNON.Vec3(BOX_W / 2, WALL_T, BOX_D / 2), new CANNON.Vec3(0, FLOOR_Y - WALL_T, 0));
+  staticBox(new CANNON.Vec3(WALL_T, BOX_H / 2, BOX_D / 2), new CANNON.Vec3(-BOX_W / 2 - WALL_T, BOX_H / 2, 0));
+  staticBox(new CANNON.Vec3(WALL_T, BOX_H / 2, BOX_D / 2), new CANNON.Vec3( BOX_W / 2 + WALL_T, BOX_H / 2, 0));
+  staticBox(new CANNON.Vec3(BOX_W / 2, BOX_H / 2, WALL_T), new CANNON.Vec3(0, BOX_H / 2, -BOX_D / 2 - WALL_T));
+  staticBox(new CANNON.Vec3(BOX_W / 2, BOX_H / 2, WALL_T), new CANNON.Vec3(0, BOX_H / 2,  BOX_D / 2 + WALL_T));
+  staticBox(new CANNON.Vec3(BOX_W / 2, WALL_T, BOX_D / 2), new CANNON.Vec3(0, BOX_H + WALL_T, 0));
+
+  let audioContext = null;
+  let lastCollisionSoundAt = 0;
+  async function ensureAudio() {
+    if (!audioContext) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      audioContext = new AudioCtx();
+    }
+    if (audioContext.state === 'suspended') {
+      try { await audioContext.resume(); } catch (_) {}
+    }
+  }
+
+  function collisionSound(impact) {
+    if (!audioContext || audioContext.state !== 'running') return;
+    const nowMs = performance.now();
+    if (nowMs - lastCollisionSoundAt < 34) return;
+    lastCollisionSoundAt = nowMs;
+    const strength = THREE.MathUtils.clamp((impact - 0.35) / 6.5, 0, 1);
+    if (strength <= 0) return;
+    const ctx = audioContext;
+    const duration = 0.032 + strength * 0.026;
+    const frameCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
+    const buffer = ctx.createBuffer(1, frameCount, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < frameCount; i++) {
+      const t = i / frameCount;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1950 - strength * 1050;
+    filter.Q.value = 1.1 + strength * 0.8;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.025 + strength * 0.12;
+    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.start();
+  }
+
+  function stopSound() {
+    if (!audioContext || audioContext.state !== 'running') return;
+    const ctx = audioContext;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(235, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(135, ctx.currentTime + 0.07);
+    gain.gain.setValueAtTime(0.035, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.075);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.08);
+  }
+
+  let rolling = false;
+  let phase = 'idle';
+  let targetD6 = 1;
+  let rollStartedAt = 0;
+  let stableSince = null;
+  let optionSnapshot = ['', '', ''];
+  let correction = null;
+  let renderFrame = 0;
+
+  dieBody.addEventListener('collide', (event) => {
+    if (!rolling || phase !== 'physics') return;
+    const contact = event.contact;
+    if (!contact || typeof contact.getImpactVelocityAlongNormal !== 'function') return;
+    collisionSound(Math.abs(contact.getImpactVelocityAlongNormal()));
+  });
+
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function randomSignedMagnitude(min, max) { return (Math.random() < 0.5 ? -1 : 1) * rand(min, max); }
+
+  function secureD6() {
+    if (window.crypto?.getRandomValues) {
+      const range = 0x100000000;
+      const limit = range - (range % 6);
+      const u = new Uint32Array(1);
+      do { window.crypto.getRandomValues(u); } while (u[0] >= limit);
+      return (u[0] % 6) + 1;
+    }
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
+  function randomQuaternion() {
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const u3 = Math.random();
+    const r1 = Math.sqrt(1 - u1);
+    const r2 = Math.sqrt(u1);
+    const t1 = 2 * Math.PI * u2;
+    const t2 = 2 * Math.PI * u3;
+    return new CANNON.Quaternion(
+      r1 * Math.sin(t1), r1 * Math.cos(t1), r2 * Math.sin(t2), r2 * Math.cos(t2)
+    );
+  }
+
+  async function startRoll() {
+    if (rolling) return;
+    rolling = true;
+    phase = 'physics';
+    targetD6 = secureD6();
+    rollStartedAt = performance.now();
+    stableSince = null;
+    correction = null;
+    optionSnapshot = optionInputs.map((input) => input.value.trim());
+    resultEl.hidden = true;
+    hint.classList.add('hidden');
+    canvas.classList.add('busy');
+    canvas.setAttribute('aria-disabled', 'true');
+
+    await ensureAudio();
+
+    dieBody.type = CANNON.Body.DYNAMIC;
+    dieBody.collisionResponse = true;
+    dieBody.updateMassProperties();
+    dieBody.wakeUp();
+    dieBody.linearDamping = 0.10;
+    dieBody.angularDamping = 0.12;
+    dieBody.position.set(rand(-0.65, 0.65), rand(1.02, 1.28), rand(-0.48, 0.48));
+    dieBody.quaternion.copy(randomQuaternion());
+    dieBody.velocity.set(rand(-2.5, 2.5), rand(7.1, 8.4), rand(-2.1, 2.1));
+    dieBody.angularVelocity.set(
+      randomSignedMagnitude(7, 17), randomSignedMagnitude(7, 17), randomSignedMagnitude(7, 17)
+    );
+    dieBody.force.setZero();
+    dieBody.torque.setZero();
+  }
+
+  function beginCorrection(now) {
+    if (!rolling || phase !== 'physics') return;
+    phase = 'correction';
+    dieBody.velocity.setZero();
+    dieBody.angularVelocity.setZero();
+    dieBody.force.setZero();
+    dieBody.torque.setZero();
+
+    const startQuat = new THREE.Quaternion(
+      dieBody.quaternion.x, dieBody.quaternion.y, dieBody.quaternion.z, dieBody.quaternion.w
+    ).normalize();
+    const desiredWorldNormal = FACE_NORMALS[targetD6].clone().applyQuaternion(startQuat).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const adjust = new THREE.Quaternion().setFromUnitVectors(desiredWorldNormal, up);
+    const targetQuat = adjust.multiply(startQuat).normalize();
+    const angle = startQuat.angleTo(targetQuat);
+
+    correction = {
+      startedAt: now,
+      duration: THREE.MathUtils.clamp(150 + angle * 125, 150, 500),
+      startQuat,
+      targetQuat,
+      startPosition: new THREE.Vector3(dieBody.position.x, dieBody.position.y, dieBody.position.z),
+      lift: 0.028 + (angle / Math.PI) * 0.105
+    };
+    dieBody.type = CANNON.Body.KINEMATIC;
+    dieBody.collisionResponse = false;
+    dieBody.updateMassProperties();
+  }
+
+  function updateCorrection(now) {
+    if (!correction || phase !== 'correction') return;
+    const raw = (now - correction.startedAt) / correction.duration;
+    const t = THREE.MathUtils.clamp(raw, 0, 1);
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const q = new THREE.Quaternion().slerpQuaternions(correction.startQuat, correction.targetQuat, eased);
+    dieBody.quaternion.set(q.x, q.y, q.z, q.w);
+
+    const safeX = THREE.MathUtils.clamp(correction.startPosition.x, -BOX_W / 2 + HALF_DIE + 0.03, BOX_W / 2 - HALF_DIE - 0.03);
+    const safeZ = THREE.MathUtils.clamp(correction.startPosition.z, -BOX_D / 2 + HALF_DIE + 0.03, BOX_D / 2 - HALF_DIE - 0.03);
+    const baseY = HALF_DIE + 0.025;
+    const bounce = Math.sin(Math.PI * t) * correction.lift;
+    dieBody.position.set(safeX, baseY + bounce, safeZ);
+
+    if (t >= 1) {
+      const tq = correction.targetQuat;
+      dieBody.quaternion.set(tq.x, tq.y, tq.z, tq.w);
+      dieBody.position.set(safeX, baseY, safeZ);
+      dieBody.velocity.setZero();
+      dieBody.angularVelocity.setZero();
+      dieBody.type = CANNON.Body.DYNAMIC;
+      dieBody.collisionResponse = true;
+      dieBody.updateMassProperties();
+      dieBody.sleep();
+      correction = null;
+      finalizeResult(targetD6);
+    }
+  }
+
+  function finalizeResult(d6) {
+    const mapped = mappedResult(d6);
+    const label = optionSnapshot[mapped - 1] || '';
+    resultIndexEl.textContent = `→ ${mapped}`;
+    resultLabelEl.textContent = label;
+    resultEl.hidden = false;
+
+    const li = document.createElement('li');
+    li.textContent = `${DICE_GLYPHS[d6]} → ${mapped}${label ? ` / ${label}` : ''}`;
+    historyList.prepend(li);
+    historyEl.hidden = false;
+    stopSound();
+    rolling = false;
+    phase = 'idle';
+    canvas.classList.remove('busy');
+    canvas.removeAttribute('aria-disabled');
+  }
+
+  function updateRollState(now) {
+    if (!rolling) return;
+    if (phase === 'correction') {
+      updateCorrection(now);
+      return;
+    }
+    const elapsed = now - rollStartedAt;
+    const speed = dieBody.velocity.length();
+    const angularSpeed = dieBody.angularVelocity.length();
+    if (elapsed > 4100) {
+      dieBody.linearDamping = 0.34;
+      dieBody.angularDamping = 0.42;
+    }
+    if (elapsed > 1050 && speed < 0.34 && angularSpeed < 0.48) {
+      if (stableSince === null) stableSince = now;
+      if (now - stableSince > 360) beginCorrection(now);
+    } else {
+      stableSince = null;
+    }
+    if (elapsed > 6200 && phase === 'physics') beginCorrection(now);
+  }
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  function pointerHitsDie(event) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    return raycaster.intersectObject(hitMesh, false).length > 0;
+  }
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (rolling) return;
+    if (pointerHitsDie(event)) {
+      event.preventDefault();
+      startRoll();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('keydown', (event) => {
+    if (rolling) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      startRoll();
+    }
+  });
+
+  const FIXED_STEP = 1 / 60;
+  const RENDER_INTERVAL = 1000 / 12;
+  let lastPhysicsAt = performance.now();
+  let lastRenderAt = -Infinity;
+
+  function syncVisuals() {
+    const jitter = ((renderFrame % 3) - 1) * 0.006;
+    const qx = Math.round(dieBody.position.x * 80) / 80 + jitter;
+    const qy = Math.round(dieBody.position.y * 80) / 80;
+    const qz = Math.round(dieBody.position.z * 80) / 80 - jitter;
+    dieMesh.position.set(qx, qy, qz);
+    dieMesh.quaternion.set(dieBody.quaternion.x, dieBody.quaternion.y, dieBody.quaternion.z, dieBody.quaternion.w);
+    hitMesh.position.copy(dieMesh.position);
+    hitMesh.quaternion.copy(dieMesh.quaternion);
+    shadow.position.x = qx;
+    shadow.position.z = qz;
+    const height = Math.max(0, dieBody.position.y - HALF_DIE);
+    const shadowScale = THREE.MathUtils.clamp(1.05 - height * 0.12, 0.48, 1.0);
+    shadow.scale.set(shadowScale, shadowScale, shadowScale);
+    shadow.material.opacity = THREE.MathUtils.clamp(0.29 - height * 0.035, 0.08, 0.28);
+  }
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - lastPhysicsAt) / 1000, 0.05);
+    lastPhysicsAt = now;
+    world.step(FIXED_STEP, dt, 4);
+    updateRollState(now);
+    if (now - lastRenderAt >= RENDER_INTERVAL) {
+      lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
+      syncVisuals();
+      renderer.render(scene, camera);
+      renderFrame++;
+    }
+  }
+
+  function resizeRenderer() {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const cssW = rect.width;
+    const cssH = rect.height;
+    const internalW = Math.round(THREE.MathUtils.clamp(cssW * 0.48, 170, 250));
+    const internalH = Math.max(150, Math.round(internalW * (cssH / cssW)));
+    renderer.setSize(internalW, internalH, false);
+    camera.aspect = cssW / cssH;
+    camera.updateProjectionMatrix();
+    lastRenderAt = -Infinity;
+  }
+
+  const resizeObserver = new ResizeObserver(resizeRenderer);
+  resizeObserver.observe(stage);
+  window.addEventListener('orientationchange', () => setTimeout(resizeRenderer, 120));
+  window.visualViewport?.addEventListener('resize', () => requestAnimationFrame(resizeRenderer));
+
+  console.assert([1, 2, 3, 4, 5, 6].map(mappedResult).join(',') === '1,1,2,2,3,3', '1d6 → 1d3 mapping failed');
+  console.assert(new Set(materialFaceOrder).size === 6, 'Dice face mapping must contain all six faces');
+
+  resizeRenderer();
+  syncVisuals();
+  requestAnimationFrame(animate);
+</script>
+</body>
+</html>

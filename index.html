@@ -12,21 +12,40 @@
       background: #151713;
       color: #d7d8ce;
     }
+
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: #151713; }
-    body { min-height: 100svh; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #151713;
+    }
+
+    body {
+      min-height: 100svh;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
     main {
       width: min(100%, 620px);
       margin: 0 auto;
       padding: max(14px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
     }
-    .options { display: grid; gap: 7px; margin: 0 0 12px; }
+
+    .options {
+      display: grid;
+      gap: 7px;
+      margin: 0 0 12px;
+    }
+
     .option-row {
       display: grid;
       grid-template-columns: 24px minmax(0, 1fr);
       align-items: center;
       gap: 7px;
     }
+
     .option-row label {
       color: #bbbdb2;
       text-align: right;
@@ -34,13 +53,29 @@
       line-height: 1;
       user-select: none;
     }
+
     .option-row input {
-      width: 100%; min-width: 0; height: 38px; padding: 6px 8px;
-      border: 1px solid #55594f; border-radius: 0; outline: 0;
-      background: #1c1e1a; color: #ededdf; font: inherit; font-size: 16px;
-      caret-color: #ededdf; -webkit-appearance: none; appearance: none;
+      width: 100%;
+      min-width: 0;
+      height: 38px;
+      padding: 6px 8px;
+      border: 1px solid #55594f;
+      border-radius: 0;
+      outline: 0;
+      background: #1c1e1a;
+      color: #ededdf;
+      font: inherit;
+      font-size: 16px;
+      caret-color: #ededdf;
+      -webkit-appearance: none;
+      appearance: none;
     }
-    .option-row input:focus { border-color: #929687; background: #20221d; }
+
+    .option-row input:focus {
+      border-color: #929687;
+      background: #20221d;
+    }
+
     .stage {
       position: relative;
       width: 100%;
@@ -51,38 +86,94 @@
       background: #11130f;
       border: 1px solid #3e4239;
     }
+
     #diceCanvas {
-      display: block; width: 100%; height: 100%;
-      image-rendering: pixelated; image-rendering: crisp-edges;
-      touch-action: manipulation; cursor: pointer; outline: none;
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      touch-action: manipulation;
+      cursor: pointer;
+      outline: none;
     }
+
     #diceCanvas.busy { cursor: default; }
+
     .hint {
-      position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2;
-      margin: 0; text-align: center; color: rgba(215, 216, 206, .48);
-      font-size: 13px; letter-spacing: .08em; pointer-events: none; user-select: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 12px;
+      z-index: 2;
+      margin: 0;
+      text-align: center;
+      color: rgba(215, 216, 206, .48);
+      font-size: 13px;
+      letter-spacing: .08em;
+      pointer-events: none;
+      user-select: none;
     }
+
     .hint.hidden { visibility: hidden; }
-    .result { min-height: 68px; padding: 12px 2px 4px; text-align: center; }
+
+    .result {
+      min-height: 68px;
+      padding: 12px 2px 4px;
+      text-align: center;
+    }
+
     .result[hidden] { display: block; visibility: hidden; }
+
     .result-index {
-      margin: 0; font-size: 28px; line-height: 1.1; font-weight: 700;
-      letter-spacing: .02em; color: #eeefe5;
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: #eeefe5;
     }
+
     .result-label {
-      margin: 6px 0 0; min-height: 1.2em; color: #c8cabf;
-      font-size: 17px; line-height: 1.3; overflow-wrap: anywhere;
+      margin: 6px 0 0;
+      min-height: 1.2em;
+      color: #c8cabf;
+      font-size: 17px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
     }
-    .history { margin-top: 10px; border-top: 1px solid #3e4239; padding-top: 10px; }
+
+    .history {
+      margin-top: 10px;
+      border-top: 1px solid #3e4239;
+      padding-top: 10px;
+    }
+
     .history[hidden] { display: none; }
+
     .history h2 {
-      margin: 0 0 7px; color: #8f9387; font-size: 12px;
-      font-weight: 400; letter-spacing: .15em;
+      margin: 0 0 7px;
+      color: #8f9387;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: .15em;
     }
-    .history ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+
+    .history ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 4px;
+    }
+
     .history li {
-      color: #bfc1b7; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere;
+      color: #bfc1b7;
+      font-size: 14px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
     }
+
     @media (max-height: 700px) and (orientation: portrait) {
       main { padding-top: 9px; }
       .options { gap: 5px; margin-bottom: 8px; }
@@ -90,6 +181,7 @@
       .stage { min-height: 260px; height: min(46svh, calc(100vw - 28px)); }
       .result { min-height: 60px; padding-top: 9px; }
     }
+
     @media (orientation: landscape) and (max-height: 520px) {
       main { width: min(100%, 760px); }
       .stage { height: 62svh; min-height: 250px; }
@@ -99,9 +191,18 @@
 <body>
 <main>
   <section class="options" aria-label="三個選項">
-    <div class="option-row"><label for="option1">1</label><input id="option1" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
-    <div class="option-row"><label for="option2">2</label><input id="option2" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
-    <div class="option-row"><label for="option3">3</label><input id="option3" type="text" inputmode="text" autocomplete="off" maxlength="120"></div>
+    <div class="option-row">
+      <label for="option1">1</label>
+      <input id="option1" type="text" inputmode="text" autocomplete="off" maxlength="120">
+    </div>
+    <div class="option-row">
+      <label for="option2">2</label>
+      <input id="option2" type="text" inputmode="text" autocomplete="off" maxlength="120">
+    </div>
+    <div class="option-row">
+      <label for="option3">3</label>
+      <input id="option3" type="text" inputmode="text" autocomplete="off" maxlength="120">
+    </div>
   </section>
 
   <section id="stage" class="stage" aria-label="透明骰子盒">
@@ -144,10 +245,12 @@
     5: new THREE.Vector3(0, 0, -1),
     6: new THREE.Vector3(0, -1, 0)
   };
+
   const mappedResult = (d6) => Math.ceil(d6 / 2);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x11130f);
+
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 50);
   camera.position.set(5.3, 4.4, 6.3);
   camera.lookAt(0, 2.05, 0);
@@ -155,6 +258,7 @@
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'default' });
   renderer.setPixelRatio(1);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+
   scene.add(new THREE.AmbientLight(0xd8d5c3, 1.2));
   const sun = new THREE.DirectionalLight(0xffffff, 1.35);
   sun.position.set(3, 7, 4);
@@ -193,17 +297,21 @@
     ctx.strokeStyle = '#747262';
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, 62, 62);
+
     const p = {
       tl: [17, 17], tc: [32, 17], tr: [47, 17],
       ml: [17, 32], mc: [32, 32], mr: [47, 32],
       bl: [17, 47], bc: [32, 47], br: [47, 47]
     };
     const layout = {
-      1: ['mc'], 2: ['tl', 'br'], 3: ['tl', 'mc', 'br'],
+      1: ['mc'],
+      2: ['tl', 'br'],
+      3: ['tl', 'mc', 'br'],
       4: ['tl', 'tr', 'bl', 'br'],
       5: ['tl', 'tr', 'mc', 'bl', 'br'],
       6: ['tl', 'tr', 'ml', 'mr', 'bl', 'br']
     }[value];
+
     ctx.fillStyle = '#171813';
     for (const key of layout) {
       const [x, y] = p[key];
@@ -211,6 +319,7 @@
       ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fill();
     }
+
     const texture = new THREE.CanvasTexture(c);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.NearestFilter;
@@ -220,7 +329,11 @@
   }
 
   const materialFaceOrder = [3, 4, 1, 6, 2, 5];
-  const dieMaterials = materialFaceOrder.map((face) => new THREE.MeshLambertMaterial({ map: pipTexture(face), flatShading: true }));
+  const dieMaterials = materialFaceOrder.map((face) => new THREE.MeshLambertMaterial({
+    map: pipTexture(face),
+    flatShading: true
+  }));
+
   const dieMesh = new THREE.Mesh(new THREE.BoxGeometry(DIE_SIZE, DIE_SIZE, DIE_SIZE, 1, 1, 1), dieMaterials);
   scene.add(dieMesh);
 
@@ -279,6 +392,7 @@
     world.addBody(body);
     return body;
   }
+
   staticBox(new CANNON.Vec3(BOX_W / 2, WALL_T, BOX_D / 2), new CANNON.Vec3(0, FLOOR_Y - WALL_T, 0));
   staticBox(new CANNON.Vec3(WALL_T, BOX_H / 2, BOX_D / 2), new CANNON.Vec3(-BOX_W / 2 - WALL_T, BOX_H / 2, 0));
   staticBox(new CANNON.Vec3(WALL_T, BOX_H / 2, BOX_D / 2), new CANNON.Vec3( BOX_W / 2 + WALL_T, BOX_H / 2, 0));
@@ -288,6 +402,7 @@
 
   let audioContext = null;
   let lastCollisionSoundAt = 0;
+
   async function ensureAudio() {
     if (!audioContext) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -304,8 +419,10 @@
     const nowMs = performance.now();
     if (nowMs - lastCollisionSoundAt < 34) return;
     lastCollisionSoundAt = nowMs;
+
     const strength = THREE.MathUtils.clamp((impact - 0.35) / 6.5, 0, 1);
     if (strength <= 0) return;
+
     const ctx = audioContext;
     const duration = 0.032 + strength * 0.026;
     const frameCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
@@ -315,6 +432,7 @@
       const t = i / frameCount;
       data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2);
     }
+
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     const filter = ctx.createBiquadFilter();
@@ -342,6 +460,13 @@
     osc.stop(ctx.currentTime + 0.08);
   }
 
+  dieBody.addEventListener('collide', (event) => {
+    if (!rolling || phase !== 'physics') return;
+    const contact = event.contact;
+    if (!contact || typeof contact.getImpactVelocityAlongNormal !== 'function') return;
+    collisionSound(Math.abs(contact.getImpactVelocityAlongNormal()));
+  });
+
   let rolling = false;
   let phase = 'idle';
   let targetD6 = 1;
@@ -351,15 +476,13 @@
   let correction = null;
   let renderFrame = 0;
 
-  dieBody.addEventListener('collide', (event) => {
-    if (!rolling || phase !== 'physics') return;
-    const contact = event.contact;
-    if (!contact || typeof contact.getImpactVelocityAlongNormal !== 'function') return;
-    collisionSound(Math.abs(contact.getImpactVelocityAlongNormal()));
-  });
+  function rand(min, max) {
+    return min + Math.random() * (max - min);
+  }
 
-  function rand(min, max) { return min + Math.random() * (max - min); }
-  function randomSignedMagnitude(min, max) { return (Math.random() < 0.5 ? -1 : 1) * rand(min, max); }
+  function randomSignedMagnitude(min, max) {
+    return (Math.random() < 0.5 ? -1 : 1) * rand(min, max);
+  }
 
   function secureD6() {
     if (window.crypto?.getRandomValues) {
@@ -381,7 +504,10 @@
     const t1 = 2 * Math.PI * u2;
     const t2 = 2 * Math.PI * u3;
     return new CANNON.Quaternion(
-      r1 * Math.sin(t1), r1 * Math.cos(t1), r2 * Math.sin(t2), r2 * Math.cos(t2)
+      r1 * Math.sin(t1),
+      r1 * Math.cos(t1),
+      r2 * Math.sin(t2),
+      r2 * Math.cos(t2)
     );
   }
 
@@ -394,6 +520,7 @@
     stableSince = null;
     correction = null;
     optionSnapshot = optionInputs.map((input) => input.value.trim());
+
     resultEl.hidden = true;
     hint.classList.add('hidden');
     canvas.classList.add('busy');
@@ -411,7 +538,9 @@
     dieBody.quaternion.copy(randomQuaternion());
     dieBody.velocity.set(rand(-2.5, 2.5), rand(7.1, 8.4), rand(-2.1, 2.1));
     dieBody.angularVelocity.set(
-      randomSignedMagnitude(7, 17), randomSignedMagnitude(7, 17), randomSignedMagnitude(7, 17)
+      randomSignedMagnitude(7, 17),
+      randomSignedMagnitude(7, 17),
+      randomSignedMagnitude(7, 17)
     );
     dieBody.force.setZero();
     dieBody.torque.setZero();
@@ -426,8 +555,12 @@
     dieBody.torque.setZero();
 
     const startQuat = new THREE.Quaternion(
-      dieBody.quaternion.x, dieBody.quaternion.y, dieBody.quaternion.z, dieBody.quaternion.w
+      dieBody.quaternion.x,
+      dieBody.quaternion.y,
+      dieBody.quaternion.z,
+      dieBody.quaternion.w
     ).normalize();
+
     const desiredWorldNormal = FACE_NORMALS[targetD6].clone().applyQuaternion(startQuat).normalize();
     const up = new THREE.Vector3(0, 1, 0);
     const adjust = new THREE.Quaternion().setFromUnitVectors(desiredWorldNormal, up);
@@ -442,6 +575,7 @@
       startPosition: new THREE.Vector3(dieBody.position.x, dieBody.position.y, dieBody.position.z),
       lift: 0.028 + (angle / Math.PI) * 0.105
     };
+
     dieBody.type = CANNON.Body.KINEMATIC;
     dieBody.collisionResponse = false;
     dieBody.updateMassProperties();
@@ -452,6 +586,7 @@
     const raw = (now - correction.startedAt) / correction.duration;
     const t = THREE.MathUtils.clamp(raw, 0, 1);
     const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
     const q = new THREE.Quaternion().slerpQuaternions(correction.startQuat, correction.targetQuat, eased);
     dieBody.quaternion.set(q.x, q.y, q.z, q.w);
 
@@ -479,6 +614,7 @@
   function finalizeResult(d6) {
     const mapped = mappedResult(d6);
     const label = optionSnapshot[mapped - 1] || '';
+
     resultIndexEl.textContent = `→ ${mapped}`;
     resultLabelEl.textContent = label;
     resultEl.hidden = false;
@@ -487,6 +623,7 @@
     li.textContent = `${DICE_GLYPHS[d6]} → ${mapped}${label ? ` / ${label}` : ''}`;
     historyList.prepend(li);
     historyEl.hidden = false;
+
     stopSound();
     rolling = false;
     phase = 'idle';
@@ -500,39 +637,69 @@
       updateCorrection(now);
       return;
     }
+
     const elapsed = now - rollStartedAt;
     const speed = dieBody.velocity.length();
     const angularSpeed = dieBody.angularVelocity.length();
+
     if (elapsed > 4100) {
       dieBody.linearDamping = 0.34;
       dieBody.angularDamping = 0.42;
     }
+
     if (elapsed > 1050 && speed < 0.34 && angularSpeed < 0.48) {
       if (stableSince === null) stableSince = now;
       if (now - stableSince > 360) beginCorrection(now);
     } else {
       stableSince = null;
     }
-    if (elapsed > 6200 && phase === 'physics') beginCorrection(now);
+
+    if (elapsed > 6200 && phase === 'physics') {
+      beginCorrection(now);
+    }
   }
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  function pointerHitsDie(event) {
+  const projectedDie = new THREE.Vector3();
+
+  function pointHitsDie(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    if (!rect.width || !rect.height) return false;
+
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    return raycaster.intersectObject(hitMesh, false).length > 0;
+    if (raycaster.intersectObject(hitMesh, false).length > 0) return true;
+
+    projectedDie.copy(dieMesh.position).project(camera);
+    const dieX = rect.left + (projectedDie.x * 0.5 + 0.5) * rect.width;
+    const dieY = rect.top + (-projectedDie.y * 0.5 + 0.5) * rect.height;
+    const radius = Math.max(54, Math.min(92, rect.width * 0.18));
+    return Math.hypot(clientX - dieX, clientY - dieY) <= radius;
   }
 
-  canvas.addEventListener('pointerdown', (event) => {
+  function activateAt(clientX, clientY, event) {
     if (rolling) return;
-    if (pointerHitsDie(event)) {
-      event.preventDefault();
-      startRoll();
-    }
+    if (!pointHitsDie(clientX, clientY)) return;
+    event?.preventDefault?.();
+    startRoll();
+  }
+
+  canvas.addEventListener('pointerup', (event) => {
+    activateAt(event.clientX, event.clientY, event);
   }, { passive: false });
+
+  canvas.addEventListener('touchend', (event) => {
+    if (rolling) return;
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    activateAt(touch.clientX, touch.clientY, event);
+  }, { passive: false });
+
+  canvas.addEventListener('click', (event) => {
+    activateAt(event.clientX, event.clientY, event);
+  });
 
   canvas.addEventListener('keydown', (event) => {
     if (rolling) return;
@@ -552,10 +719,12 @@
     const qx = Math.round(dieBody.position.x * 80) / 80 + jitter;
     const qy = Math.round(dieBody.position.y * 80) / 80;
     const qz = Math.round(dieBody.position.z * 80) / 80 - jitter;
+
     dieMesh.position.set(qx, qy, qz);
     dieMesh.quaternion.set(dieBody.quaternion.x, dieBody.quaternion.y, dieBody.quaternion.z, dieBody.quaternion.w);
     hitMesh.position.copy(dieMesh.position);
     hitMesh.quaternion.copy(dieMesh.quaternion);
+
     shadow.position.x = qx;
     shadow.position.z = qz;
     const height = Math.max(0, dieBody.position.y - HALF_DIE);
@@ -570,6 +739,7 @@
     lastPhysicsAt = now;
     world.step(FIXED_STEP, dt, 4);
     updateRollState(now);
+
     if (now - lastRenderAt >= RENDER_INTERVAL) {
       lastRenderAt = now - ((now - lastRenderAt) % RENDER_INTERVAL);
       syncVisuals();
@@ -583,6 +753,7 @@
     if (!rect.width || !rect.height) return;
     const cssW = rect.width;
     const cssH = rect.height;
+
     const internalW = Math.round(THREE.MathUtils.clamp(cssW * 0.48, 170, 250));
     const internalH = Math.max(150, Math.round(internalW * (cssH / cssW)));
     renderer.setSize(internalW, internalH, false);
